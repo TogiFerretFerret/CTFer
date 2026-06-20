@@ -1,7 +1,12 @@
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use fluent_templates::{static_loader, Loader, fluent_bundle::FluentValue};
 use std::{collections::HashMap, borrow::Cow, fmt};
+use serde::{Serialize, Deserialize};
+use hmac::{Hmac, Mac};
+use sha2::Sha256;
 use unic_langid::langid;
+
+type HmacSha256 = Hmac<Sha256>;
 
 static_loader! {
     static LOCALES = {
@@ -17,8 +22,6 @@ fn jwt64_encode(payload: &[u8]) -> String {
 fn jwt64_decode(payload: &[u8]) -> Result<Vec<u8>, JwtError> {
     URL_SAFE_NO_PAD.decode(payload).map_err(JwtError::Base64DecodeError)
 }
-
-
 
 #[derive(Debug)]
 pub enum JwtError {
