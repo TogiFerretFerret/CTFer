@@ -53,5 +53,30 @@ impl fmt::Display for RepoError {
 impl std::error::Error for RepoError {}
 
 pub trait AccountRepo: Send + Sync {
-    async fn find_
+    async fn find_by_id(&self, id: &AccountId) -> Result<Option<Account>, RepoError>;
+    async fn find_by_username(&self, name: &AccountName) -> Result<Option<Account>, RepoError>;
+    async fn find_by_ctftime_id(&self, ctftime_id: u32) -> Result<Option<Account>, RepoError>;
+    async fn save(&self, account: Account) -> Result<(), RepoError>;
+    async fn update(&self, account: Account) -> Result<(), RepoError>;
 }
+
+pub trait TeamRepo: Send + Sync {
+    async fn find_by_id(&self, id: &TeamId) -> Result<Option<Team>, RepoError>;
+    async fn find_by_name(&self, name: &TeamName) -> Result<Option<Team>,RepoError>;
+    async fn find_by_ctftime_id(&self, ctftime_id: u32) -> Result<Option<Team>,RepoError>;
+    async fn save(&self, team: Team) -> Result<(), RepoError>;
+    async fn update(&self, team: Team) -> Result<(), RepoError>;
+}
+
+pub trait ChallengeRepo: Send + Sync {
+    async fn find_by_id(&self, id: &str) -> Result<Option<Challenge>, RepoError>;
+    async fn find_all(&self) -> Result<Vec<Challenge>, RepoError>;
+    async fn save(&self, challenge: Challenge) -> Result<(), RepoError>;
+}
+
+pub trait SolveRepo: Send + Sync {
+    async fn find_all(&self) -> Result<Vec<Solve>, RepoError>;
+    async fn find_by_team(&self, team_id: &TeamId) -> Result<Vec<Solve>, RepoError>;
+    async fn save(&self, solve: Solve) -> Result<(), RepoError>;
+}
+
