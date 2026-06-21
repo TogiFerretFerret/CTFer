@@ -56,5 +56,19 @@ pub struct CtfTimeTeamRating {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CtfTimeTeamMember {
+    pub id: u32,
+    pub username: String,
+}
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CtfTimeFulLTeamProfile {
+    pub id: u32,
+    pub name: String,
+    pub primary_alias: Option<String>,
+    pub aliases: Option<Vec<String>>,
+    pub logo: Option<String>,
+    pub country_code: Option<String>,
+    pub rating: Option<CtfTimeTeamRating>,
+    pub members: Vec<CtfTimeTeamMember>,
+    pub website: Option<String>,
 }
