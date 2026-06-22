@@ -369,31 +369,25 @@ where
         let teams = self.team_repo.find_all().await?;
         let submissions = self.submission_repo.find_all().await?;
         let challenges = self.challenge_repo.find_all().await?;
-
         let challenge_map: HashMap<String, &Challenge> = challenges
             .iter()
             .map(|c| (c.id.clone(), c))
             .collect();
-
         let mut solve_counts = HashMap::new();
         for sub in &submissions {
             if sub.is_correct {
                 *solve_counts.entry(sub.challenge_id.clone()).or_insert(0) += 1;
             }
         }
-
         let mut entries = Vec::new();
-
         for team in teams {
             let team_subs: Vec<&Submission> = submissions
                 .iter()
                 .filter(|s| s.team_id.as_ref() == Some(&team.id))
                 .collect();
-
             let mut points = 0;
             let mut last_solve_time = None;
             let mut solved_ids = Vec::new();
-
             for sub in team_subs {
                 if sub.is_correct {
                     if let Some(challenge) = challenge_map.get(&sub.challenge_id) {
@@ -405,7 +399,6 @@ where
                                 sub.points
                             }
                         };
-
                         points += challenge_points;
                         solved_ids.push(sub.challenge_id.clone());
 
@@ -416,7 +409,6 @@ where
                     }
                 }
             }
-
             entries.push(ScoreboardEntry {
                 team_id: team.id,
                 team_name: team.name.0,
@@ -426,7 +418,6 @@ where
                 rank: 0,
             });
         }
-
         if self.sort_by_accuracy {
             let get_accuracy = |team_id: &TeamId| -> f64 {
                 let subs: Vec<&Submission> = submissions
@@ -439,7 +430,6 @@ where
                     (subs.iter().filter(|s| s.is_correct).count() as f64) / (subs.len() as f64)
                 }
             };
-
             entries.sort_by(|a, b| {
                 b.points.cmp(&a.points).then_with(|| {
                     let acc_a = get_accuracy(&a.team_id);
@@ -459,11 +449,9 @@ where
                 })
             });
         }
-
         for (i, entry) in entries.iter_mut().enumerate() {
             entry.rank = (i + 1) as u32;
         }
-
         Ok(entries)
     }
 
@@ -471,27 +459,21 @@ where
         let standings = self.get_scoreboard().await?;
         let submissions = self.submission_repo.find_all().await?;
         let challenges = self.challenge_repo.find_all().await?;
-
         let challenge_map: HashMap<String, &Challenge> = challenges
             .iter()
             .map(|c| (c.id.clone(), c))
             .collect();
-
         let tasks: Vec<String> = challenges
             .iter()
             .map(|c| c.title.0.clone())
             .collect();
-
         let mut ctftime_standings = Vec::new();
-
         for entry in standings {
             let mut task_stats = HashMap::new();
-
             let team_solves: Vec<&Submission> = submissions
                 .iter()
                 .filter(|s| s.team_id.as_ref() == Some(&entry.team_id) && s.is_correct)
                 .collect();
-
             for solve in team_solves {
                 if let Some(challenge) = challenge_map.get(&solve.challenge_id) {
                     task_stats.insert(
@@ -503,7 +485,6 @@ where
                     );
                 }
             }
-
             ctftime_standings.push(CtfTimeStandingsEntry {
                 pos: Some(entry.rank),
                 team: entry.team_name,
@@ -511,7 +492,6 @@ where
                 task_stats,
             });
         }
-
         Ok(CtfTimeScoreboardExport { tasks, standings: ctftime_standings })
     }
 }
