@@ -74,7 +74,7 @@ pub trait ChallengeRepo: Send + Sync {
 }
 
 pub trait SubmissionRepo: Send + Sync {
-    async fn find_all(&self( -> Result<Vec<Submission>, RepoError>;
+    async fn find_all(&self) -> Result<Vec<Submission>, RepoError>;
     async fn find_by_team(&self, team_id: &TeamId) -> Result<Vec<Submission>, RepoError>;
     async fn save(&self, submission: Submission) -> Result<(), RepoError>;
 }

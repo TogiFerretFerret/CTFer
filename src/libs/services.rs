@@ -332,7 +332,7 @@ where
             }
         };
         let solve = Solve{
-            id: SolveId(uuid::Uuid::new_v4().to_string()),
+            id: SubmissionId(uuid::Uuid::new_v4().to_string()),
             challenge_id: challenge_id.to_string(),
             team_id,
             account_id,
