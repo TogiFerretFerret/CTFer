@@ -16,6 +16,10 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
 use unic_langid::langid;
+use kube::{Client, Api};
+use k8s_openapi::api::core::v1::{Pod, Service, Container, ContainerPort, ServicePort, ServiceSpec, PodSpec};
+use k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta;
+use std::collections::BTreeMap;
 
 static_loader! {
     static LOCALES = {
@@ -279,7 +283,6 @@ where
                             team.captain_id = new_account.id.clone(); // this may mitigate?
                         }
                         team.member_ids.push(new_account.id.clone());
-                        team.member_ids.push(new_account.id.clone());
                         self.team_repo.update(team).await?;
                     }
                 }
@@ -526,6 +529,7 @@ where
         })
     }
 }
+
 
 #[cfg(test)]
 mod tests {

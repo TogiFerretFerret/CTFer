@@ -24,3 +24,7 @@ oauth-invalid-credentials = Invalid OAuth credentials: {$reason}
 auth-missing-header = Missing Authorization header
 auth-invalid-scheme = Invalid Authorization scheme
 auth-invalid-token = Invalid token: {$reason}
+
+# Kubernetes errors
+kube-api-error = Kubernetes operation failed: {$reason}
+

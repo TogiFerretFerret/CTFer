@@ -237,6 +237,19 @@ impl PgStore {
         )
         .execute(&self.pool)
         .await?;
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS challenge_instances ( \
+                    id VARCHAR(64) PRIMARY KEY, \
+                    challenge_id VARCHAR(64) NOT NULL REFERENCES challenges(id) ON DELETE CASCADE, \
+                    team_id VARCHAR(64) REFERENCES teams(id) ON DELETE SET NULL, \
+                    account_id VARCHAR(64) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE, \
+                    flag VARCHAR(255) NOT NULL, \
+                    created_att BIGINT NOT NULL, \
+                    expires_at BIGINT NOT NULL, \
+                );"
+        )
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
     async fn map_team(&self, row: &sqlx::postgres::PgRow) -> Result<Team, sqlx::Error> {
