@@ -23,7 +23,6 @@ static_loader! {
     };
 }
 
-#[derive(Clone)]
 pub struct AppState<A, T, C, S> {
     pub auth_service: Arc<AuthService<A, T>>,
     pub oauth_service: Arc<OAuthService<A, T>>,
