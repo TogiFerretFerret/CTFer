@@ -11,7 +11,6 @@ use sha2::{Sha256, Digest};
 use std::collections::HashMap;
 use std::borrow::Cow;
 use std::fmt;
-use std::sync::Arc;
 use unic_langid::langid;
 
 static_loader! {

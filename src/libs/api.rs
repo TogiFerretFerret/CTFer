@@ -13,7 +13,7 @@ use std::borrow::Cow;
 use fluent_templates::{static_loader, Loader, fluent_bundle::FluentValue};
 use crate::libs::services::{AuthService, OAuthService, SolveService, ScoreboardService, ServiceError};
 use crate::libs::repos::PgStore;
-use crate::libs::types::accounts::{AccountId, Account};
+use crate::libs::types::accounts::AccountId;
 use crate::libs::types::teams::TeamId;
 
 static_loader! {
