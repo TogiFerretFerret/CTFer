@@ -1,6 +1,6 @@
-use serde::{Serialize, Deserialize};
-use crate::libs::types::htmlstring::HtmlString;
 use crate::libs::types::flags::FlagValidator;
+use crate::libs::types::htmlstring::HtmlString;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ChallengeTitle(pub String);

@@ -1,20 +1,21 @@
-use axum::{
-    extract::{State, Path, FromRequestParts},
-    http::{StatusCode, request::Parts, HeaderMap},
-    response::IntoResponse,
-    routing::{get, post},
-    Router, 
-    Json,
+use crate::libs::repos::{AccountRepo, ChallengeRepo, PgStore, SubmissionRepo, TeamRepo};
+use crate::libs::services::{
+    AuthService, OAuthService, ScoreboardService, ServiceError, SolveService,
 };
-use serde::Deserialize;
-use std::sync::Arc;
-use std::collections::HashMap;
-use std::borrow::Cow;
-use fluent_templates::{static_loader, Loader, fluent_bundle::FluentValue};
-use crate::libs::services::{AuthService, OAuthService, SolveService, ScoreboardService, ServiceError};
-use crate::libs::repos::{AccountRepo, TeamRepo, ChallengeRepo, SubmissionRepo, PgStore};
 use crate::libs::types::accounts::AccountId;
 use crate::libs::types::teams::TeamId;
+use axum::{
+    Json, Router,
+    extract::{FromRequestParts, Path, State},
+    http::{HeaderMap, StatusCode, request::Parts},
+    response::IntoResponse,
+    routing::{get, post},
+};
+use fluent_templates::{Loader, fluent_bundle::FluentValue, static_loader};
+use serde::Deserialize;
+use std::borrow::Cow;
+use std::collections::HashMap;
+use std::sync::Arc;
 
 static_loader! {
     static LOCALES = {
@@ -58,7 +59,8 @@ where
 pub struct PreferredLang(pub String);
 
 fn get_lang(headers: &HeaderMap) -> String {
-    headers.get(axum::http::header::ACCEPT_LANGUAGE)
+    headers
+        .get(axum::http::header::ACCEPT_LANGUAGE)
         .and_then(|h| h.to_str().ok())
         .map(|s| s.split(',').next().unwrap_or("en-US").trim().to_string())
         .unwrap_or_else(|| "en-US".to_string())
@@ -118,10 +120,17 @@ where
     S: SubmissionRepo + Send + Sync + 'static,
 {
     type Rejection = LocalizedError;
-    async fn from_request_parts(parts: &mut Parts, state: &AppState<A, T, C, S>) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &AppState<A, T, C, S>,
+    ) -> Result<Self, Self::Rejection> {
         let lang = get_lang(&parts.headers);
-        let lang_id = lang.parse().unwrap_or_else(|_| unic_langid::langid!("en-US"));
-        let auth_header = parts.headers.get(axum::http::header::AUTHORIZATION)
+        let lang_id = lang
+            .parse()
+            .unwrap_or_else(|_| unic_langid::langid!("en-US"));
+        let auth_header = parts
+            .headers
+            .get(axum::http::header::AUTHORIZATION)
             .and_then(|h| h.to_str().ok())
             .ok_or_else(|| LocalizedError {
                 status: StatusCode::UNAUTHORIZED,
@@ -134,15 +143,16 @@ where
             });
         }
         let token = &auth_header["Bearer ".len()..];
-        let (_,account_id_str) = crate::libs::crypto::jwt::decode(token, &state.jwt_secret)
+        let (_, account_id_str) = crate::libs::crypto::jwt::decode(token, &state.jwt_secret)
             .map_err(|e| LocalizedError {
                 status: StatusCode::UNAUTHORIZED,
                 message: {
-                    let args = HashMap::from([
-                        (Cow::Borrowed("reason"), FluentValue::from(e.to_string()))
-                    ]);
+                    let args = HashMap::from([(
+                        Cow::Borrowed("reason"),
+                        FluentValue::from(e.to_string()),
+                    )]);
                     LOCALES.lookup_with_args(&lang_id, "auth-invalid-token", &args)
-                }
+                },
             })?;
         Ok(AuthenticatedUser {
             account_id: AccountId(account_id_str),
@@ -185,11 +195,15 @@ where
     C: ChallengeRepo + Send + Sync + 'static,
     S: SubmissionRepo + Send + Sync + 'static,
 {
-    let res = state.auth_service.register(
-        &payload.username,
-        payload.email.as_deref(),
-        &payload.password,
-    ).await.map_localized(&lang.0);
+    let res = state
+        .auth_service
+        .register(
+            &payload.username,
+            payload.email.as_deref(),
+            &payload.password,
+        )
+        .await
+        .map_localized(&lang.0);
 
     match res {
         Ok(account) => (StatusCode::CREATED, Json(account)).into_response(),
@@ -208,7 +222,11 @@ where
     C: ChallengeRepo + Send + Sync + 'static,
     S: SubmissionRepo + Send + Sync + 'static,
 {
-    let res = state.auth_service.login(&payload.username, &payload.password).await.map_localized(&lang.0);
+    let res = state
+        .auth_service
+        .login(&payload.username, &payload.password)
+        .await
+        .map_localized(&lang.0);
     match res {
         Ok(token) => Json(serde_json::json!({"token":token})).into_response(),
         Err(err) => err.into_response(),
@@ -239,7 +257,11 @@ where
     C: ChallengeRepo + Send + Sync + 'static,
     S: SubmissionRepo + Send + Sync + 'static,
 {
-    let res = state.oauth_service.handle_callback(&query.code).await.map_localized(&lang.0);
+    let res = state
+        .oauth_service
+        .handle_callback(&query.code)
+        .await
+        .map_localized(&lang.0);
     match res {
         Ok(token) => Json(serde_json::json!({"token":token})).into_response(),
         Err(err) => err.into_response(),
@@ -260,13 +282,11 @@ where
     S: SubmissionRepo + Send + Sync + 'static,
 {
     let team_id = payload.team_id.map(TeamId);
-    let res = state.solve_service.submit_flag(
-        &challenge_id,
-        team_id,
-        user.account_id,
-        &payload.flag,
-    ).await
-    .map_localized(&lang.0);
+    let res = state
+        .solve_service
+        .submit_flag(&challenge_id, team_id, user.account_id, &payload.flag)
+        .await
+        .map_localized(&lang.0);
 
     match res {
         Ok(submission) => Json(submission).into_response(),
@@ -284,7 +304,11 @@ where
     C: ChallengeRepo + Send + Sync + 'static,
     S: SubmissionRepo + Send + Sync + 'static,
 {
-    let res = state.scoreboard_service.get_scoreboard().await.map_localized(&lang.0);
+    let res = state
+        .scoreboard_service
+        .get_scoreboard()
+        .await
+        .map_localized(&lang.0);
     match res {
         Ok(board) => Json(board).into_response(),
         Err(err) => err.into_response(),
@@ -301,7 +325,11 @@ where
     C: ChallengeRepo + Send + Sync + 'static,
     S: SubmissionRepo + Send + Sync + 'static,
 {
-    let res = state.scoreboard_service.export_ctftime().await.map_localized(&lang.0);
+    let res = state
+        .scoreboard_service
+        .export_ctftime()
+        .await
+        .map_localized(&lang.0);
     match res {
         Ok(export) => Json(export).into_response(),
         Err(err) => err.into_response(),
@@ -319,24 +347,33 @@ where
         .route("/api/v1/auth/register", post(register::<A, T, C, S>))
         .route("/api/v1/auth/login", post(login::<A, T, C, S>))
         .route("/api/v1/auth/oauth/url", get(get_oauth_url::<A, T, C, S>))
-        .route("/api/v1/auth/oauth/callback", get(oauth_callback::<A, T, C, S>))
-        .route("/api/v1/challenges/:id/submit", post(submit_flag::<A, T, C, S>))
+        .route(
+            "/api/v1/auth/oauth/callback",
+            get(oauth_callback::<A, T, C, S>),
+        )
+        .route(
+            "/api/v1/challenges/:id/submit",
+            post(submit_flag::<A, T, C, S>),
+        )
         .route("/api/v1/scoreboard", get(get_scoreboard::<A, T, C, S>))
-        .route("/api/v1/scoreboard/export", get(export_scoreboard::<A, T, C, S>))
+        .route(
+            "/api/v1/scoreboard/export",
+            get(export_scoreboard::<A, T, C, S>),
+        )
         .with_state(state)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::http::Request;
-    use tower::ServiceExt;
-    use tokio::sync::RwLock;
-    use crate::libs::repos::{AccountRepo, TeamRepo, ChallengeRepo, SubmissionRepo, RepoError};
+    use crate::libs::repos::{AccountRepo, ChallengeRepo, RepoError, SubmissionRepo, TeamRepo};
     use crate::libs::types::accounts::{Account, AccountName};
-    use crate::libs::types::teams::{Team, TeamName};
     use crate::libs::types::challenges::Challenge;
     use crate::libs::types::solves::Submission;
+    use crate::libs::types::teams::{Team, TeamName};
+    use axum::http::Request;
+    use tokio::sync::RwLock;
+    use tower::ServiceExt;
 
     #[derive(Default)]
     struct TestStore {
@@ -349,18 +386,39 @@ mod tests {
         async fn find_by_id(&self, id: &AccountId) -> Result<Option<Account>, RepoError> {
             Ok(self.accounts.read().await.get(id).cloned())
         }
-        async fn find_by_username(&self, username: &AccountName) -> Result<Option<Account>, RepoError> {
-            Ok(self.accounts.read().await.values().find(|a| &a.username == username).cloned())
+        async fn find_by_username(
+            &self,
+            username: &AccountName,
+        ) -> Result<Option<Account>, RepoError> {
+            Ok(self
+                .accounts
+                .read()
+                .await
+                .values()
+                .find(|a| &a.username == username)
+                .cloned())
         }
         async fn find_by_ctftime_id(&self, ctftime_id: u32) -> Result<Option<Account>, RepoError> {
-            Ok(self.accounts.read().await.values().find(|a| a.ctftime_id == Some(ctftime_id)).cloned())
+            Ok(self
+                .accounts
+                .read()
+                .await
+                .values()
+                .find(|a| a.ctftime_id == Some(ctftime_id))
+                .cloned())
         }
         async fn save(&self, account: Account) -> Result<(), RepoError> {
-            self.accounts.write().await.insert(account.id.clone(), account);
+            self.accounts
+                .write()
+                .await
+                .insert(account.id.clone(), account);
             Ok(())
         }
         async fn update(&self, account: Account) -> Result<(), RepoError> {
-            self.accounts.write().await.insert(account.id.clone(), account);
+            self.accounts
+                .write()
+                .await
+                .insert(account.id.clone(), account);
             Ok(())
         }
     }
@@ -369,10 +427,22 @@ mod tests {
             Ok(self.teams.read().await.get(id).cloned())
         }
         async fn find_by_name(&self, name: &TeamName) -> Result<Option<Team>, RepoError> {
-            Ok(self.teams.read().await.values().find(|t| &t.name == name).cloned())
+            Ok(self
+                .teams
+                .read()
+                .await
+                .values()
+                .find(|t| &t.name == name)
+                .cloned())
         }
         async fn find_by_ctftime_id(&self, ctftime_id: u32) -> Result<Option<Team>, RepoError> {
-            Ok(self.teams.read().await.values().find(|t| t.ctftime_id == Some(ctftime_id)).cloned())
+            Ok(self
+                .teams
+                .read()
+                .await
+                .values()
+                .find(|t| t.ctftime_id == Some(ctftime_id))
+                .cloned())
         }
         async fn save(&self, team: Team) -> Result<(), RepoError> {
             self.teams.write().await.insert(team.id.clone(), team);
@@ -391,7 +461,10 @@ mod tests {
             Ok(self.challenges.read().await.get(id).cloned())
         }
         async fn save(&self, challenge: Challenge) -> Result<(), RepoError> {
-            self.challenges.write().await.insert(challenge.id.clone(), challenge);
+            self.challenges
+                .write()
+                .await
+                .insert(challenge.id.clone(), challenge);
             Ok(())
         }
         async fn find_all(&self) -> Result<Vec<Challenge>, RepoError> {
@@ -404,7 +477,14 @@ mod tests {
             Ok(())
         }
         async fn find_by_team(&self, team_id: &TeamId) -> Result<Vec<Submission>, RepoError> {
-            Ok(self.submissions.read().await.iter().filter(|s| s.team_id.as_ref() == Some(team_id)).cloned().collect())
+            Ok(self
+                .submissions
+                .read()
+                .await
+                .iter()
+                .filter(|s| s.team_id.as_ref() == Some(team_id))
+                .cloned()
+                .collect())
         }
         async fn find_all(&self) -> Result<Vec<Submission>, RepoError> {
             Ok(self.submissions.read().await.clone())
@@ -448,7 +528,7 @@ mod tests {
                     .uri("/api/v1/auth/register")
                     .header("content-type", "application/json")
                     .body(axum::body::Body::from(
-                        r#"{"username":"testuser","password":"testpassword","email":null}"#
+                        r#"{"username":"testuser","password":"testpassword","email":null}"#,
                     ))
                     .unwrap(),
             )
@@ -462,7 +542,7 @@ mod tests {
                     .uri("/api/v1/auth/login")
                     .header("content-type", "application/json")
                     .body(axum::body::Body::from(
-                        r#"{"username":"testuser","password":"testpassword"}"#
+                        r#"{"username":"testuser","password":"testpassword"}"#,
                     ))
                     .unwrap(),
             )

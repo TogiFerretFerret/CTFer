@@ -1,15 +1,19 @@
-use crate::libs::repos::{AccountRepo, TeamRepo, ChallengeRepo, SubmissionRepo, RepoError};
-use crate::libs::types::accounts::{Account, AccountId, AccountName, AccountEmail, AccountRole, CtfTimeUserProfile};
-use crate::libs::types::teams::{Team, TeamId, TeamName};
-use crate::libs::types::challenges::{Challenge, ScoringMode};
-use crate::libs::types::solves::{Submission,SubmissionId};
-use crate::libs::types::flags::FlagValidator;
 use crate::libs::crypto::jwt;
-use crate::libs::types::scoreboard::{ScoreboardEntry, CtfTimeScoreboardExport, CtfTimeStandingsEntry, CtfTimeTaskStats};
-use fluent_templates::{static_loader, Loader, fluent_bundle::FluentValue};
-use sha2::{Sha256, Digest};
-use std::collections::HashMap;
+use crate::libs::repos::{AccountRepo, ChallengeRepo, RepoError, SubmissionRepo, TeamRepo};
+use crate::libs::types::accounts::{
+    Account, AccountEmail, AccountId, AccountName, AccountRole, CtfTimeUserProfile,
+};
+use crate::libs::types::challenges::{Challenge, ScoringMode};
+use crate::libs::types::flags::FlagValidator;
+use crate::libs::types::scoreboard::{
+    CtfTimeScoreboardExport, CtfTimeStandingsEntry, CtfTimeTaskStats, ScoreboardEntry,
+};
+use crate::libs::types::solves::{Submission, SubmissionId};
+use crate::libs::types::teams::{Team, TeamId, TeamName};
+use fluent_templates::{Loader, fluent_bundle::FluentValue, static_loader};
+use sha2::{Digest, Sha256};
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::fmt;
 use unic_langid::langid;
 
@@ -25,7 +29,7 @@ pub enum ServiceError {
     Repo(RepoError),
     OAuth(String),
     InvalidRequest(String),
-    Unauthorized
+    Unauthorized,
 }
 
 impl From<RepoError> for ServiceError {
@@ -42,7 +46,10 @@ impl ServiceError {
             ServiceError::Unauthorized => LOCALES.lookup(&lang_id, "auth-not-logged-in"),
             ServiceError::InvalidRequest(key) => LOCALES.lookup(&lang_id, key),
             ServiceError::OAuth(reason) => {
-                let args = HashMap::from([(Cow::Borrowed("reason"),FluentValue::from(reason.to_string()))]);
+                let args = HashMap::from([(
+                    Cow::Borrowed("reason"),
+                    FluentValue::from(reason.to_string()),
+                )]);
                 LOCALES.lookup_with_args(&lang_id, "oauth-invalid-credentials", &args)
             }
         }
@@ -65,7 +72,8 @@ fn hash_password(password: &str, salt: &str) -> String {
     let mut hasher = Sha256::new();
     hasher.update(salt.as_bytes());
     hasher.update(password.as_bytes());
-    let hash_hex: String = hasher.finalize()
+    let hash_hex: String = hasher
+        .finalize()
         .iter()
         .map(|b| format!("{:02x}", b))
         .collect();
@@ -82,7 +90,8 @@ fn verify_password(password: &str, stored_hash: &str) -> bool {
     let mut hasher = Sha256::new();
     hasher.update(salt.as_bytes());
     hasher.update(password.as_bytes());
-    let hash_hex: String = hasher.finalize()
+    let hash_hex: String = hasher
+        .finalize()
         .iter()
         .map(|b| format!("{:02x}", b))
         .collect();
@@ -90,17 +99,17 @@ fn verify_password(password: &str, stored_hash: &str) -> bool {
 }
 
 pub struct AuthService<A, T>
-where 
+where
     A: AccountRepo,
     T: TeamRepo,
 {
-    pub account_repo: A, 
+    pub account_repo: A,
     pub team_repo: T,
     pub jwt_secret: Vec<u8>,
 }
 
 impl<A, T> AuthService<A, T>
-where 
+where
     A: AccountRepo,
     T: TeamRepo,
 {
@@ -112,7 +121,9 @@ where
     ) -> Result<Account, ServiceError> {
         let name = AccountName(username.to_string());
         if self.account_repo.find_by_username(&name).await?.is_some() {
-            return Err(ServiceError::InvalidRequest("auth-username-taken".to_string()));
+            return Err(ServiceError::InvalidRequest(
+                "auth-username-taken".to_string(),
+            ));
         }
         let account_id = AccountId(uuid::Uuid::new_v4().to_string());
         let salt = generate_salt();
@@ -134,12 +145,19 @@ where
 
     pub async fn login(&self, username: &str, password: &str) -> Result<String, ServiceError> {
         let name = AccountName(username.to_string());
-        let account = self.account_repo.find_by_username(&name).await?
+        let account = self
+            .account_repo
+            .find_by_username(&name)
+            .await?
             .ok_or_else(|| ServiceError::InvalidRequest("auth-invalid-credentials".to_string()))?;
-        let stored_hash = account.password_hash.as_deref()
+        let stored_hash = account
+            .password_hash
+            .as_deref()
             .ok_or_else(|| ServiceError::InvalidRequest("auth-invalid-credentials".to_string()))?;
         if !verify_password(password, stored_hash) {
-            return Err(ServiceError::InvalidRequest("auth-invalid-credentials".to_string()));
+            return Err(ServiceError::InvalidRequest(
+                "auth-invalid-credentials".to_string(),
+            ));
         }
         let token = jwt::encode(&account.id.0, &self.jwt_secret)
             .map_err(|e| ServiceError::OAuth(e.to_string()))?;
@@ -148,20 +166,20 @@ where
 }
 
 pub struct OAuthService<A, T>
-where 
+where
     A: AccountRepo,
     T: TeamRepo,
 {
-        pub account_repo: A,
-        pub team_repo: T,
-        pub client_id: String,
-        pub client_secret: String,
-        pub redirect_uri: String,
-        pub jwt_secret: Vec<u8>,
+    pub account_repo: A,
+    pub team_repo: T,
+    pub client_id: String,
+    pub client_secret: String,
+    pub redirect_uri: String,
+    pub jwt_secret: Vec<u8>,
 }
 
 impl<A, T> OAuthService<A, T>
-where 
+where
     A: AccountRepo,
     T: TeamRepo,
 {
@@ -189,7 +207,8 @@ where
             .json::<serde_json::Value>()
             .await
             .map_err(|_| ServiceError::OAuth("auth-oauth-token-parse-failed".to_string()))?;
-        let access_token = token_resp.get("access_token")
+        let access_token = token_resp
+            .get("access_token")
             .and_then(|t| t.as_str())
             .ok_or_else(|| ServiceError::OAuth("auth-oauth-token-missing".to_string()))?;
         let profile = client
@@ -200,18 +219,23 @@ where
             .map_err(|_| ServiceError::OAuth("auth-oauth-profile-failed".to_string()))?
             .json::<CtfTimeUserProfile>()
             .await
-            .map_err(|_| ServiceError::OAuth("auth-oauth-profile-parse-failed".to_string()))?;  
+            .map_err(|_| ServiceError::OAuth("auth-oauth-profile-parse-failed".to_string()))?;
         let account = match self.account_repo.find_by_ctftime_id(profile.id).await? {
             Some(acc) => acc,
             None => {
                 let base_name = profile.username.clone();
                 let mut check_name = AccountName(base_name.clone());
                 let mut suffix = 1;
-                while self.account_repo.find_by_username(&check_name).await?.is_some() {
+                while self
+                    .account_repo
+                    .find_by_username(&check_name)
+                    .await?
+                    .is_some()
+                {
                     check_name = AccountName(format!("{}{}", base_name, suffix));
                     suffix += 1;
                 } // TODO: this probably can't cause time issues because.. I know big O, but... it's
-                  // possible :shrug:
+                // possible :shrug:
                 let mut local_team_id = None;
                 if let Some(ref ctftime_team) = profile.team {
                     let team = match self.team_repo.find_by_ctftime_id(ctftime_team.id).await? {
@@ -249,8 +273,9 @@ where
                 self.account_repo.save(new_account.clone()).await?;
                 if let Some(t_id) = local_team_id {
                     if let Some(mut team) = self.team_repo.find_by_id(&t_id).await? {
-                        if team.captain_id.0 == "system-oauth" { // TODO: security issue if someone names
-                                                                 // something system-oauth???
+                        if team.captain_id.0 == "system-oauth" {
+                            // TODO: security issue if someone names
+                            // something system-oauth???
                             team.captain_id = new_account.id.clone(); // this may mitigate?
                         }
                         team.member_ids.push(new_account.id.clone());
@@ -288,12 +313,20 @@ where
         account_id: AccountId,
         submitted_flag: &str,
     ) -> Result<Submission, ServiceError> {
-        let challenge = self.challenge_repo.find_by_id(challenge_id).await?
+        let challenge = self
+            .challenge_repo
+            .find_by_id(challenge_id)
+            .await?
             .ok_or_else(|| ServiceError::InvalidRequest("ctf-challenge-not-found".to_string()))?;
         if let Some(ref t_id) = team_id {
             let subs = self.submission_repo.find_by_team(t_id).await?;
-            if subs.iter().any(|s| s.challenge_id == challenge_id && s.is_correct) {
-                return Err(ServiceError::InvalidRequest("ctf-already-solved".to_string()));
+            if subs
+                .iter()
+                .any(|s| s.challenge_id == challenge_id && s.is_correct)
+            {
+                return Err(ServiceError::InvalidRequest(
+                    "ctf-already-solved".to_string(),
+                ));
             }
         }
         let is_correct = match &challenge.flag {
@@ -307,16 +340,17 @@ where
             FlagValidator::Instanced => false,
         };
 
-        let _total_solves = self.submission_repo.find_all().await?
+        let _total_solves = self
+            .submission_repo
+            .find_all()
+            .await?
             .iter()
             .filter(|s| s.challenge_id == challenge_id && s.is_correct)
             .count() as u32;
 
         let points_awarded = if is_correct {
             match challenge.points.mode {
-                ScoringMode::PointValue => {
-                    challenge.points.equation.parse::<u32>().unwrap_or(100)
-                }
+                ScoringMode::PointValue => challenge.points.equation.parse::<u32>().unwrap_or(100),
                 ScoringMode::PointAttribution => {
                     challenge.points.equation.parse::<u32>().unwrap_or(100)
                 }
@@ -339,7 +373,9 @@ where
         self.submission_repo.save(submission.clone()).await?;
 
         if !is_correct {
-            return Err(ServiceError::InvalidRequest("ctf-incorrect-flag".to_string()));
+            return Err(ServiceError::InvalidRequest(
+                "ctf-incorrect-flag".to_string(),
+            ));
         }
 
         Ok(submission)
@@ -368,10 +404,8 @@ where
         let teams = self.team_repo.find_all().await?;
         let submissions = self.submission_repo.find_all().await?;
         let challenges = self.challenge_repo.find_all().await?;
-        let challenge_map: HashMap<String, &Challenge> = challenges
-            .iter()
-            .map(|c| (c.id.clone(), c))
-            .collect();
+        let challenge_map: HashMap<String, &Challenge> =
+            challenges.iter().map(|c| (c.id.clone(), c)).collect();
         let mut solve_counts = HashMap::new();
         for sub in &submissions {
             if sub.is_correct {
@@ -394,9 +428,7 @@ where
                             ScoringMode::PointValue => {
                                 challenge.points.equation.parse::<u32>().unwrap_or(100)
                             }
-                            ScoringMode::PointAttribution => {
-                                sub.points
-                            }
+                            ScoringMode::PointAttribution => sub.points,
                         };
                         points += challenge_points;
                         solved_ids.push(sub.challenge_id.clone());
@@ -433,19 +465,21 @@ where
                 b.points.cmp(&a.points).then_with(|| {
                     let acc_a = get_accuracy(&a.team_id);
                     let acc_b = get_accuracy(&b.team_id);
-                    acc_b.partial_cmp(&acc_a).unwrap_or(std::cmp::Ordering::Equal)
+                    acc_b
+                        .partial_cmp(&acc_a)
+                        .unwrap_or(std::cmp::Ordering::Equal)
                 })
             });
         } else {
             entries.sort_by(|a, b| {
-                b.points.cmp(&a.points).then_with(|| {
-                    match (a.last_solve_time, b.last_solve_time) {
+                b.points
+                    .cmp(&a.points)
+                    .then_with(|| match (a.last_solve_time, b.last_solve_time) {
                         (Some(t1), Some(t2)) => t1.cmp(&t2),
                         (Some(_), None) => std::cmp::Ordering::Less,
                         (None, Some(_)) => std::cmp::Ordering::Greater,
                         (None, None) => std::cmp::Ordering::Equal,
-                    }
-                })
+                    })
             });
         }
         for (i, entry) in entries.iter_mut().enumerate() {
@@ -458,14 +492,9 @@ where
         let standings = self.get_scoreboard().await?;
         let submissions = self.submission_repo.find_all().await?;
         let challenges = self.challenge_repo.find_all().await?;
-        let challenge_map: HashMap<String, &Challenge> = challenges
-            .iter()
-            .map(|c| (c.id.clone(), c))
-            .collect();
-        let tasks: Vec<String> = challenges
-            .iter()
-            .map(|c| c.title.0.clone())
-            .collect();
+        let challenge_map: HashMap<String, &Challenge> =
+            challenges.iter().map(|c| (c.id.clone(), c)).collect();
+        let tasks: Vec<String> = challenges.iter().map(|c| c.title.0.clone()).collect();
         let mut ctftime_standings = Vec::new();
         for entry in standings {
             let mut task_stats = HashMap::new();
@@ -491,7 +520,10 @@ where
                 task_stats,
             });
         }
-        Ok(CtfTimeScoreboardExport { tasks, standings: ctftime_standings })
+        Ok(CtfTimeScoreboardExport {
+            tasks,
+            standings: ctftime_standings,
+        })
     }
 }
 
@@ -502,42 +534,75 @@ mod tests {
     use tokio::sync::RwLock;
 
     #[derive(Default)]
-    struct TestStore{
+    struct TestStore {
         accounts: RwLock<HashMap<AccountId, Account>>,
         teams: RwLock<HashMap<TeamId, Team>>,
         challenges: RwLock<HashMap<String, Challenge>>,
         submissions: RwLock<Vec<Submission>>,
     }
 
-    impl AccountRepo for TestStore{
-        async fn find_by_id(&self, id: &AccountId) -> Result<Option<Account>,RepoError> {
+    impl AccountRepo for TestStore {
+        async fn find_by_id(&self, id: &AccountId) -> Result<Option<Account>, RepoError> {
             Ok(self.accounts.read().await.get(id).cloned())
         }
-        async fn find_by_username(&self, username: &AccountName) -> Result<Option<Account>, RepoError> {
-            Ok(self.accounts.read().await.values().find(|a| &a.username == username).cloned())
+        async fn find_by_username(
+            &self,
+            username: &AccountName,
+        ) -> Result<Option<Account>, RepoError> {
+            Ok(self
+                .accounts
+                .read()
+                .await
+                .values()
+                .find(|a| &a.username == username)
+                .cloned())
         }
         async fn find_by_ctftime_id(&self, ctftime_id: u32) -> Result<Option<Account>, RepoError> {
-            Ok(self.accounts.read().await.values().find(|a| a.ctftime_id == Some(ctftime_id)).cloned())
+            Ok(self
+                .accounts
+                .read()
+                .await
+                .values()
+                .find(|a| a.ctftime_id == Some(ctftime_id))
+                .cloned())
         }
         async fn save(&self, account: Account) -> Result<(), RepoError> {
-            self.accounts.write().await.insert(account.id.clone(), account);
+            self.accounts
+                .write()
+                .await
+                .insert(account.id.clone(), account);
             Ok(())
         }
         async fn update(&self, account: Account) -> Result<(), RepoError> {
-            self.accounts.write().await.insert(account.id.clone(), account);
+            self.accounts
+                .write()
+                .await
+                .insert(account.id.clone(), account);
             Ok(())
         }
     }
 
-    impl TeamRepo for TestStore{
-        async fn find_by_id(&self, id: &TeamId) -> Result<Option<Team>,RepoError> {
+    impl TeamRepo for TestStore {
+        async fn find_by_id(&self, id: &TeamId) -> Result<Option<Team>, RepoError> {
             Ok(self.teams.read().await.get(id).cloned())
         }
         async fn find_by_name(&self, name: &TeamName) -> Result<Option<Team>, RepoError> {
-            Ok(self.teams.read().await.values().find(|t| &t.name == name).cloned())
+            Ok(self
+                .teams
+                .read()
+                .await
+                .values()
+                .find(|t| &t.name == name)
+                .cloned())
         }
         async fn find_by_ctftime_id(&self, ctftime_id: u32) -> Result<Option<Team>, RepoError> {
-            Ok(self.teams.read().await.values().find(|t| t.ctftime_id == Some(ctftime_id)).cloned())
+            Ok(self
+                .teams
+                .read()
+                .await
+                .values()
+                .find(|t| t.ctftime_id == Some(ctftime_id))
+                .cloned())
         }
         async fn save(&self, team: Team) -> Result<(), RepoError> {
             self.teams.write().await.insert(team.id.clone(), team);
@@ -552,12 +617,15 @@ mod tests {
         }
     }
 
-    impl ChallengeRepo for TestStore{
-        async fn find_by_id(&self, id: &str) -> Result<Option<Challenge>,RepoError> {
+    impl ChallengeRepo for TestStore {
+        async fn find_by_id(&self, id: &str) -> Result<Option<Challenge>, RepoError> {
             Ok(self.challenges.read().await.get(id).cloned())
         }
         async fn save(&self, challenge: Challenge) -> Result<(), RepoError> {
-            self.challenges.write().await.insert(challenge.id.clone(), challenge);
+            self.challenges
+                .write()
+                .await
+                .insert(challenge.id.clone(), challenge);
             Ok(())
         }
         async fn find_all(&self) -> Result<Vec<Challenge>, RepoError> {
@@ -565,13 +633,20 @@ mod tests {
         }
     }
 
-    impl SubmissionRepo for TestStore{
+    impl SubmissionRepo for TestStore {
         async fn save(&self, submission: Submission) -> Result<(), RepoError> {
             self.submissions.write().await.push(submission);
             Ok(())
         }
         async fn find_by_team(&self, team_id: &TeamId) -> Result<Vec<Submission>, RepoError> {
-            Ok(self.submissions.read().await.iter().filter(|s| s.team_id.as_ref() == Some(team_id)).cloned().collect())
+            Ok(self
+                .submissions
+                .read()
+                .await
+                .iter()
+                .filter(|s| s.team_id.as_ref() == Some(team_id))
+                .cloned()
+                .collect())
         }
         async fn find_all(&self) -> Result<Vec<Submission>, RepoError> {
             Ok(self.submissions.read().await.clone())
@@ -586,7 +661,14 @@ mod tests {
             team_repo: store.clone(),
             jwt_secret: b"secret".to_vec(),
         };
-        let account = auth.register("unittest", Some("unittest@example.com"), "unittest_password").await.unwrap();
+        let account = auth
+            .register(
+                "unittest",
+                Some("unittest@example.com"),
+                "unittest_password",
+            )
+            .await
+            .unwrap();
         assert_eq!(account.username.0, "unittest");
         let token = auth.login("unittest", "unittest_password").await.unwrap();
         assert!(!token.is_empty());
@@ -621,28 +703,58 @@ mod tests {
         let challenge = Challenge {
             id: "chall-1".to_string(),
             title: crate::libs::types::challenges::ChallengeTitle("Chall 1".to_string()),
-            description: crate::libs::types::challenges::ChallengeDescription(crate::libs::types::htmlstring::HtmlString("Desc".to_string())),
+            description: crate::libs::types::challenges::ChallengeDescription(
+                crate::libs::types::htmlstring::HtmlString("Desc".to_string()),
+            ),
             category: crate::libs::types::challenges::ChallengeCategory("Web".to_string()),
             points: crate::libs::types::challenges::ChallengePoints {
                 mode: ScoringMode::PointValue,
                 equation: "500".to_string(),
             },
             flag: FlagValidator::Static("flag{test}".to_string()),
-            author: crate::libs::types::challenges::ChallengeAuthor { id: "admin".to_string(), username: "admin".to_string() },
+            author: crate::libs::types::challenges::ChallengeAuthor {
+                id: "admin".to_string(),
+                username: "admin".to_string(),
+            },
             hints: Vec::new(),
             files: Vec::new(),
             tags: Vec::new(),
             requirements: Vec::new(),
         };
-        ChallengeRepo::save(store.as_ref(), challenge).await.unwrap();
+        ChallengeRepo::save(store.as_ref(), challenge)
+            .await
+            .unwrap();
         let solver = SolveService {
             challenge_repo: store.clone(),
             submission_repo: store.clone(),
         };
-        solver.submit_flag("chall-1", Some(TeamId("team-a".to_string())), AccountId("user-1".to_string()), "flag{test}").await.unwrap();
-        let fail = solver.submit_flag("chall-1", Some(TeamId("team-b".to_string())), AccountId("user-2".to_string()), "wrong-flag").await;
+        solver
+            .submit_flag(
+                "chall-1",
+                Some(TeamId("team-a".to_string())),
+                AccountId("user-1".to_string()),
+                "flag{test}",
+            )
+            .await
+            .unwrap();
+        let fail = solver
+            .submit_flag(
+                "chall-1",
+                Some(TeamId("team-b".to_string())),
+                AccountId("user-2".to_string()),
+                "wrong-flag",
+            )
+            .await;
         assert!(fail.is_err());
-        solver.submit_flag("chall-1", Some(TeamId("team-b".to_string())), AccountId("user-2".to_string()), "flag{test}").await.unwrap();
+        solver
+            .submit_flag(
+                "chall-1",
+                Some(TeamId("team-b".to_string())),
+                AccountId("user-2".to_string()),
+                "flag{test}",
+            )
+            .await
+            .unwrap();
         let scoreboard_service = ScoreboardService {
             team_repo: store.clone(),
             challenge_repo: store.clone(),

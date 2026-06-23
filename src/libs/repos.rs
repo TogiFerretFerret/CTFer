@@ -1,11 +1,11 @@
-use crate::libs::types::accounts::{Account, AccountId, AccountName, AccountEmail, AccountRole};
-use crate::libs::types::teams::{Team, TeamId, TeamName};
+use crate::libs::types::accounts::{Account, AccountEmail, AccountId, AccountName, AccountRole};
 use crate::libs::types::challenges::{Challenge, ScoringMode};
 use crate::libs::types::solves::{Submission, SubmissionId};
-use fluent_templates::{static_loader, Loader, fluent_bundle::FluentValue};
+use crate::libs::types::teams::{Team, TeamId, TeamName};
+use fluent_templates::{Loader, fluent_bundle::FluentValue, static_loader};
 use sqlx::Row;
-use std::collections::HashMap;
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::fmt;
 use unic_langid::langid;
 
@@ -30,18 +30,15 @@ impl RepoError {
         match self {
             RepoError::Connection(_) => LOCALES.lookup(&lang_id, "server-db-connection-failed"),
             RepoError::NotFound => LOCALES.lookup(&lang_id, "ctf-challenge-not-found"),
-            RepoError::Conflict(key) => {
-                LOCALES.lookup(&lang_id, key)
-            }
+            RepoError::Conflict(key) => LOCALES.lookup(&lang_id, key),
             RepoError::Internal(err) => {
-                let args = HashMap::from([(Cow::Borrowed("reason"),FluentValue::from(err.to_string()))]);
+                let args =
+                    HashMap::from([(Cow::Borrowed("reason"), FluentValue::from(err.to_string()))]);
                 LOCALES.lookup_with_args(&lang_id, "admin-db-internal-error", &args)
             }
         }
     }
-    
 }
-
 
 impl fmt::Display for RepoError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -61,8 +58,8 @@ pub trait AccountRepo: Send + Sync {
 
 pub trait TeamRepo: Send + Sync {
     async fn find_by_id(&self, id: &TeamId) -> Result<Option<Team>, RepoError>;
-    async fn find_by_name(&self, name: &TeamName) -> Result<Option<Team>,RepoError>;
-    async fn find_by_ctftime_id(&self, ctftime_id: u32) -> Result<Option<Team>,RepoError>;
+    async fn find_by_name(&self, name: &TeamName) -> Result<Option<Team>, RepoError>;
+    async fn find_by_ctftime_id(&self, ctftime_id: u32) -> Result<Option<Team>, RepoError>;
     async fn save(&self, team: Team) -> Result<(), RepoError>;
     async fn update(&self, team: Team) -> Result<(), RepoError>;
     async fn find_all(&self) -> Result<Vec<Team>, RepoError>;
@@ -178,8 +175,10 @@ impl PgStore {
                 captain_id VARCHAR(64) NOT NULL, \
                 fields JSONB NOT NULL DEFAULT '{}', \
                 created_at BIGINT NOT NULL \
-             );"
-        ).execute(&self.pool).await?;
+             );",
+        )
+        .execute(&self.pool)
+        .await?;
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS accounts ( \
                 id VARCHAR(64) PRIMARY KEY, \
@@ -191,8 +190,10 @@ impl PgStore {
                 ctftime_id INT UNIQUE, \
                 fields JSONB NOT NULL DEFAULT '{}', \
                 created_at BIGINT NOT NULL \
-             );"
-        ).execute(&self.pool).await?;
+             );",
+        )
+        .execute(&self.pool)
+        .await?;
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS challenges ( \
                 id VARCHAR(64) PRIMARY KEY, \
@@ -208,8 +209,10 @@ impl PgStore {
                 files JSONB NOT NULL DEFAULT '[]', \
                 tags JSONB NOT NULL DEFAULT '[]', \
                 requirements JSONB NOT NULL DEFAULT '[]' \
-             );"
-        ).execute(&self.pool).await?;
+             );",
+        )
+        .execute(&self.pool)
+        .await?;
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS submissions ( \
                 id VARCHAR(64) PRIMARY KEY, \
@@ -220,8 +223,10 @@ impl PgStore {
                 provided_flag TEXT NOT NULL, \
                 is_correct BOOLEAN NOT NULL, \
                 submitted_at BIGINT NOT NULL \
-             );"
-        ).execute(&self.pool).await?;
+             );",
+        )
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
     async fn map_team(&self, row: &sqlx::postgres::PgRow) -> Result<Team, sqlx::Error> {
@@ -243,8 +248,8 @@ impl PgStore {
             .map(|r| AccountId(r.get("id")))
             .collect();
 
-        let fields = serde_json::from_value(fields_val)
-            .map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
+        let fields =
+            serde_json::from_value(fields_val).map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
 
         Ok(Team {
             id: TeamId(id),
@@ -274,8 +279,8 @@ fn map_account(row: &sqlx::postgres::PgRow) -> Result<Account, sqlx::Error> {
         "Spectator" => AccountRole::Spectator,
         _ => AccountRole::Player,
     };
-    let fields = serde_json::from_value(fields_val)
-        .map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
+    let fields =
+        serde_json::from_value(fields_val).map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
     Ok(Account {
         id: AccountId(id),
         username: AccountName(username),
@@ -307,16 +312,12 @@ fn map_challenge(row: &sqlx::postgres::PgRow) -> Result<Challenge, sqlx::Error> 
         "PointAttribution" => ScoringMode::PointAttribution,
         _ => ScoringMode::PointValue,
     };
-    let flag = serde_json::from_value(flag_val)
-        .map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
-    let hints = serde_json::from_value(hints_val)
-        .map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
-    let files = serde_json::from_value(files_val)
-        .map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
-    let tags = serde_json::from_value(tags_val)
-        .map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
-    let requirements = serde_json::from_value(requirements_val)
-        .map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
+    let flag = serde_json::from_value(flag_val).map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
+    let hints = serde_json::from_value(hints_val).map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
+    let files = serde_json::from_value(files_val).map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
+    let tags = serde_json::from_value(tags_val).map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
+    let requirements =
+        serde_json::from_value(requirements_val).map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
     Ok(Challenge {
         id,
         title: crate::libs::types::challenges::ChallengeTitle(title),
@@ -478,12 +479,12 @@ impl TeamRepo for PgStore {
         }
     }
     async fn save(&self, team: Team) -> Result<(), RepoError> {
-        let fields_val = serde_json::to_value(&team.fields)
-            .map_err(|e| RepoError::Internal(e.to_string()))?;
+        let fields_val =
+            serde_json::to_value(&team.fields).map_err(|e| RepoError::Internal(e.to_string()))?;
 
         sqlx::query(
             "INSERT INTO teams (id, name, ctftime_id, invite_code, captain_id, fields, created_at) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7)"
+             VALUES ($1, $2, $3, $4, $5, $6, $7)",
         )
         .bind(&team.id.0)
         .bind(&team.name.0)
@@ -504,8 +505,8 @@ impl TeamRepo for PgStore {
         Ok(())
     }
     async fn update(&self, team: Team) -> Result<(), RepoError> {
-        let fields_val = serde_json::to_value(&team.fields)
-            .map_err(|e| RepoError::Internal(e.to_string()))?;
+        let fields_val =
+            serde_json::to_value(&team.fields).map_err(|e| RepoError::Internal(e.to_string()))?;
         sqlx::query(
             "UPDATE teams SET name = $1, ctftime_id = $2, invite_code = $3, captain_id = $4, fields = $5, created_at = $6 \
              WHERE id = $7"

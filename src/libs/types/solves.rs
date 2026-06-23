@@ -1,6 +1,6 @@
-use serde::{Serialize, Deserialize};
 use crate::libs::types::accounts::AccountId;
 use crate::libs::types::teams::TeamId;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct SubmissionId(pub String);

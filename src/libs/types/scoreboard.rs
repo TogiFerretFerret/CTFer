@@ -1,6 +1,6 @@
-use serde::{Serialize, Deserialize};
-use std::collections::HashMap;
 use crate::libs::types::teams::TeamId;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScoreboardEntry {

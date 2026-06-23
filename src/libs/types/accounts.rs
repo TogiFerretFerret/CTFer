@@ -1,6 +1,6 @@
-use serde::{Serialize, Deserialize};
-use std::collections::HashMap;
 use crate::libs::types::teams::TeamId;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct AccountId(pub String);
@@ -14,7 +14,7 @@ pub struct AccountEmail(pub String);
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum AccountRole {
     Admin,
-    Player, 
+    Player,
     Spectator,
 }
 
