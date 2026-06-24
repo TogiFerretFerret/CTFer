@@ -251,7 +251,7 @@ impl PgStore {
         .execute(&self.pool)
         .await?;
         sqlx::query(
-        "CREATE TABLE IF NOT EXISTS challenge_instance ( \
+            "CREATE TABLE IF NOT EXISTS challenge_instance ( \
                 id VARCHAR(64) PRIMARY KEY, \
                 challenge_id VARCHAR(64) REFERENCES challenges(id) ON DELETE CASCADE NOT NULL, \
                 team_id VARCHAR(64) REFERENCES teams(id) ON DELETE SET NULL, \
