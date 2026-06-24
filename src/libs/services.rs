@@ -846,16 +846,17 @@ mod tests {
             Ok(self.teams.read().await.values().cloned().collect())
         }
     }
-        
+
     #[async_trait]
     impl InstanceRepo for TestStore {
         async fn find_active_flag(
-            &self, 
+            &self,
             _challenge_id: &str,
             _team_id: Option<&TeamId>,
             _account_id: &AccountId,
         ) -> Result<Option<String>, RepoError> {
             Ok(None)
+        }
     }
 
     #[async_trait]
