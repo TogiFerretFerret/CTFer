@@ -618,6 +618,7 @@ mod tests {
                 challenge_repo: store.clone(),
                 submission_repo: store.clone(),
                 sort_by_accuracy: false,
+                freeze_time: None,
             }),
             jwt_secret: b"secret".to_vec(),
             http_client: reqwest::Client::new(),
