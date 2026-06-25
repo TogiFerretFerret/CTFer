@@ -594,6 +594,7 @@ mod tests {
             challenge_repo: store.clone(),
             submission_repo: store.clone(),
             sort_by_accuracy: false,
+            freeze_time: None,
         };
         let board = scoreboard_service.get_scoreboard().await.unwrap();
         assert_eq!(board[0].points, 0);
