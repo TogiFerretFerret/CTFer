@@ -44,7 +44,7 @@ where
         let challenges = self.challenge_repo.find_all().await?;
         let challenge_map: HashMap<String, &Challenge> =
             challenges.iter().map(|c| (c.id.clone(), c)).collect();
-        
+
         // 1. Calculate solver counts for each challenge (unique teams/accounts that got at least one correct solve)
         let mut challenge_solvers = HashMap::new();
         for sub in &submissions {
