@@ -1,12 +1,12 @@
+use super::ServiceError;
 use crate::libs::repos::RepoError;
 use k8s_openapi::api::core::v1::{
     Container, ContainerPort, Pod, PodSpec, Service, ServicePort, ServiceSpec,
 };
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta;
 use kube::{Api, Client};
-use std::collections::BTreeMap;
 use sqlx::Row;
-use super::ServiceError;
+use std::collections::BTreeMap;
 
 fn render_instanced_flag(template: &str, challenge_id: &str, random_part: &str) -> String {
     let mut rendered = template.to_string();
@@ -210,19 +210,19 @@ impl InstancerService {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::libs::repos::{AccountRepo, ChallengeRepo, InstanceRepo, SubmissionRepo, TeamRepo};
+    use crate::libs::services::auth::AuthService;
+    use crate::libs::services::scoreboard::ScoreboardService;
+    use crate::libs::services::solve::SolveService;
+    use crate::libs::types::accounts::{Account, AccountId, AccountName, AccountRole};
+    use crate::libs::types::challenges::{Challenge, ScoringMode};
+    use crate::libs::types::flags::FlagValidator;
+    use crate::libs::types::solves::{Submission, SubmissionId};
+    use crate::libs::types::teams::{Team, TeamId, TeamName};
     use async_trait::async_trait;
+    use std::collections::HashMap;
     use std::sync::Arc;
     use tokio::sync::RwLock;
-    use std::collections::HashMap;
-    use crate::libs::types::accounts::{Account, AccountName, AccountId, AccountRole};
-    use crate::libs::types::teams::{Team, TeamName, TeamId};
-    use crate::libs::types::challenges::{Challenge, ScoringMode};
-    use crate::libs::types::solves::{Submission, SubmissionId};
-    use crate::libs::types::flags::FlagValidator;
-    use crate::libs::repos::{AccountRepo, TeamRepo, InstanceRepo, ChallengeRepo, SubmissionRepo};
-    use crate::libs::services::auth::AuthService;
-    use crate::libs::services::solve::SolveService;
-    use crate::libs::services::scoreboard::ScoreboardService;
 
     #[derive(Default)]
     struct TestStore {

@@ -1,9 +1,9 @@
+use super::RepoError;
 use crate::libs::types::accounts::{Account, AccountId, AccountName};
 use crate::libs::types::challenges::Challenge;
 use crate::libs::types::solves::Submission;
 use crate::libs::types::teams::{Team, TeamId, TeamName};
 use async_trait::async_trait;
-use super::RepoError;
 
 #[async_trait]
 pub trait AccountRepo: Send + Sync {

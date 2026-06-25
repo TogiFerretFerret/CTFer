@@ -1,10 +1,10 @@
+use super::ServiceError;
 use crate::libs::repos::{ChallengeRepo, SubmissionRepo};
 use crate::libs::types::accounts::AccountId;
 use crate::libs::types::challenges::ScoringMode;
 use crate::libs::types::flags::FlagValidator;
 use crate::libs::types::solves::{Submission, SubmissionId};
 use crate::libs::types::teams::TeamId;
-use super::ServiceError;
 
 pub struct SolveService<C, S>
 where

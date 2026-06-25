@@ -1,3 +1,4 @@
+use super::ServiceError;
 use crate::libs::repos::{ChallengeRepo, SubmissionRepo, TeamRepo};
 use crate::libs::types::challenges::{Challenge, ScoringMode};
 use crate::libs::types::scoreboard::{
@@ -6,7 +7,6 @@ use crate::libs::types::scoreboard::{
 use crate::libs::types::solves::Submission;
 use crate::libs::types::teams::TeamId;
 use std::collections::HashMap;
-use super::ServiceError;
 
 pub struct ScoreboardService<T, C, S>
 where

@@ -8,11 +8,11 @@ use std::collections::HashMap;
 use std::fmt;
 use unic_langid::langid;
 
-pub mod traits;
 pub mod pg;
+pub mod traits;
 
-pub use traits::*;
 pub use pg::*;
+pub use traits::*;
 
 static_loader! {
     pub static LOCALES = {

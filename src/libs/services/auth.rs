@@ -1,10 +1,12 @@
+use super::ServiceError;
 use crate::libs::crypto::jwt;
 use crate::libs::repos::{AccountRepo, TeamRepo};
-use crate::libs::types::accounts::{Account, AccountEmail, AccountId, AccountName, AccountRole, CtfTimeUserProfile};
+use crate::libs::types::accounts::{
+    Account, AccountEmail, AccountId, AccountName, AccountRole, CtfTimeUserProfile,
+};
 use crate::libs::types::teams::{Team, TeamId, TeamName};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
-use super::ServiceError;
 
 fn generate_salt() -> String {
     uuid::Uuid::new_v4().simple().to_string()
