@@ -1,201 +1,11 @@
 use crate::libs::types::accounts::{Account, AccountEmail, AccountId, AccountName, AccountRole};
 use crate::libs::types::challenges::{Challenge, ScoringMode};
-use crate::libs::types::solves::{Submission, SubmissionId};
+use crate::libs::types::solves::Submission;
 use crate::libs::types::teams::{Team, TeamId, TeamName};
 use async_trait::async_trait;
-use fluent_templates::{Loader, fluent_bundle::FluentValue, static_loader};
 use sqlx::Row;
-use std::borrow::Cow;
-use std::collections::HashMap;
-use std::fmt;
-use unic_langid::langid;
-
-static_loader! {
-    static LOCALES = {
-        locales: "./locales",
-        fallback_language: "en-US",
-    };
-}
-
-#[derive(Debug, Clone)]
-pub enum RepoError {
-    Connection(String),
-    NotFound,
-    Conflict(String),
-    Internal(String),
-}
-
-impl RepoError {
-    pub fn localize(&self, lang: &str) -> String {
-        let lang_id = lang.parse().unwrap_or_else(|_| langid!("en-US"));
-        match self {
-            RepoError::Connection(_) => LOCALES.lookup(&lang_id, "server-db-connection-failed"),
-            RepoError::NotFound => LOCALES.lookup(&lang_id, "ctf-challenge-not-found"),
-            RepoError::Conflict(key) => LOCALES.lookup(&lang_id, key),
-            RepoError::Internal(err) => {
-                let args =
-                    HashMap::from([(Cow::Borrowed("reason"), FluentValue::from(err.to_string()))]);
-                LOCALES.lookup_with_args(&lang_id, "admin-db-internal-error", &args)
-            }
-        }
-    }
-}
-
-impl fmt::Display for RepoError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.localize("en-US"))
-    }
-}
-
-impl std::error::Error for RepoError {}
-
-#[async_trait]
-pub trait AccountRepo: Send + Sync {
-    async fn find_by_id(&self, id: &AccountId) -> Result<Option<Account>, RepoError>;
-    async fn find_by_username(&self, name: &AccountName) -> Result<Option<Account>, RepoError>;
-    async fn find_by_ctftime_id(&self, ctftime_id: u32) -> Result<Option<Account>, RepoError>;
-    async fn save(&self, account: Account) -> Result<(), RepoError>;
-    async fn update(&self, account: Account) -> Result<(), RepoError>;
-}
-
-#[async_trait]
-pub trait TeamRepo: Send + Sync {
-    async fn find_by_id(&self, id: &TeamId) -> Result<Option<Team>, RepoError>;
-    async fn find_by_name(&self, name: &TeamName) -> Result<Option<Team>, RepoError>;
-    async fn find_by_ctftime_id(&self, ctftime_id: u32) -> Result<Option<Team>, RepoError>;
-    async fn save(&self, team: Team) -> Result<(), RepoError>;
-    async fn update(&self, team: Team) -> Result<(), RepoError>;
-    async fn find_all(&self) -> Result<Vec<Team>, RepoError>;
-}
-
-#[async_trait]
-pub trait InstanceRepo: Send + Sync {
-    async fn find_active_flag(
-        &self,
-        challenge_id: &str,
-        team_id: Option<&TeamId>,
-        account_id: &AccountId,
-    ) -> Result<Option<String>, RepoError>;
-
-    async fn get_instance_ip(&self, instance_id: &str) -> Result<Option<String>, RepoError>;
-}
-
-#[async_trait]
-pub trait ChallengeRepo: InstanceRepo + Send + Sync {
-    async fn find_by_id(&self, id: &str) -> Result<Option<Challenge>, RepoError>;
-    async fn find_all(&self) -> Result<Vec<Challenge>, RepoError>;
-    async fn save(&self, challenge: Challenge) -> Result<(), RepoError>;
-}
-
-#[async_trait]
-pub trait SubmissionRepo: Send + Sync {
-    async fn find_all(&self) -> Result<Vec<Submission>, RepoError>;
-    async fn find_by_team(&self, team_id: &TeamId) -> Result<Vec<Submission>, RepoError>;
-    async fn save(&self, submission: Submission) -> Result<(), RepoError>;
-}
-
-#[async_trait]
-impl<T: AccountRepo + ?Sized> AccountRepo for std::sync::Arc<T> {
-    async fn find_by_id(&self, id: &AccountId) -> Result<Option<Account>, RepoError> {
-        (**self).find_by_id(id).await
-    }
-    async fn find_by_username(&self, name: &AccountName) -> Result<Option<Account>, RepoError> {
-        (**self).find_by_username(name).await
-    }
-    async fn find_by_ctftime_id(&self, ctftime_id: u32) -> Result<Option<Account>, RepoError> {
-        (**self).find_by_ctftime_id(ctftime_id).await
-    }
-    async fn save(&self, account: Account) -> Result<(), RepoError> {
-        (**self).save(account).await
-    }
-    async fn update(&self, account: Account) -> Result<(), RepoError> {
-        (**self).update(account).await
-    }
-}
-
-#[async_trait]
-impl<T: TeamRepo + ?Sized> TeamRepo for std::sync::Arc<T> {
-    async fn find_by_id(&self, id: &TeamId) -> Result<Option<Team>, RepoError> {
-        (**self).find_by_id(id).await
-    }
-    async fn find_by_name(&self, name: &TeamName) -> Result<Option<Team>, RepoError> {
-        (**self).find_by_name(name).await
-    }
-    async fn find_by_ctftime_id(&self, ctftime_id: u32) -> Result<Option<Team>, RepoError> {
-        (**self).find_by_ctftime_id(ctftime_id).await
-    }
-    async fn save(&self, team: Team) -> Result<(), RepoError> {
-        (**self).save(team).await
-    }
-    async fn update(&self, team: Team) -> Result<(), RepoError> {
-        (**self).update(team).await
-    }
-    async fn find_all(&self) -> Result<Vec<Team>, RepoError> {
-        (**self).find_all().await
-    }
-}
-
-#[async_trait]
-impl<T: InstanceRepo + ?Sized> InstanceRepo for std::sync::Arc<T> {
-    async fn find_active_flag(
-        &self,
-        challenge_id: &str,
-        team_id: Option<&TeamId>,
-        account_id: &AccountId,
-    ) -> Result<Option<String>, RepoError> {
-        (**self)
-            .find_active_flag(challenge_id, team_id, account_id)
-            .await
-    }
-
-    async fn get_instance_ip(&self, instance_id: &str) -> Result<Option<String>, RepoError> {
-        (**self).get_instance_ip(instance_id).await
-    }
-}
-
-#[async_trait]
-impl<T: ChallengeRepo + ?Sized> ChallengeRepo for std::sync::Arc<T> {
-    async fn find_by_id(&self, id: &str) -> Result<Option<Challenge>, RepoError> {
-        (**self).find_by_id(id).await
-    }
-    async fn find_all(&self) -> Result<Vec<Challenge>, RepoError> {
-        (**self).find_all().await
-    }
-    async fn save(&self, challenge: Challenge) -> Result<(), RepoError> {
-        (**self).save(challenge).await
-    }
-}
-
-#[async_trait]
-impl<T: SubmissionRepo + ?Sized> SubmissionRepo for std::sync::Arc<T> {
-    async fn find_all(&self) -> Result<Vec<Submission>, RepoError> {
-        (**self).find_all().await
-    }
-    async fn find_by_team(&self, team_id: &TeamId) -> Result<Vec<Submission>, RepoError> {
-        (**self).find_by_team(team_id).await
-    }
-    async fn save(&self, submission: Submission) -> Result<(), RepoError> {
-        (**self).save(submission).await
-    }
-}
-
-#[async_trait]
-impl From<sqlx::Error> for RepoError {
-    fn from(err: sqlx::Error) -> Self {
-        match &err {
-            sqlx::Error::Database(db_err) => {
-                if db_err.is_unique_violation() {
-                    RepoError::Conflict("auth-username-taken".to_string())
-                } else {
-                    RepoError::Internal(err.to_string())
-                }
-            }
-            sqlx::Error::RowNotFound => RepoError::NotFound,
-            sqlx::Error::Io(_) => RepoError::Connection(err.to_string()),
-            _ => RepoError::Internal(err.to_string()),
-        }
-    }
-}
+use super::RepoError;
+use super::traits::{AccountRepo, TeamRepo, InstanceRepo, ChallengeRepo, SubmissionRepo};
 
 pub struct PgStore {
     pool: sqlx::PgPool,
@@ -233,8 +43,7 @@ impl PgStore {
              );",
         )
         .execute(&self.pool)
-        .await?; // TODO: what happens if username>255 len, or email etc. or role? is there a string
-        // type?
+        .await?;
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS challenges ( \
                 id VARCHAR(64) PRIMARY KEY, \
@@ -269,7 +78,7 @@ impl PgStore {
         .execute(&self.pool)
         .await?;
         sqlx::query(
-            "CREATE TABLE IF NOT EXISTS challenge_instance ( \
+            "CREATE TABLE IF NOT EXISTS challenge_instances ( \
                 id VARCHAR(64) PRIMARY KEY, \
                 challenge_id VARCHAR(64) REFERENCES challenges(id) ON DELETE CASCADE NOT NULL, \
                 team_id VARCHAR(64) REFERENCES teams(id) ON DELETE SET NULL, \
@@ -277,8 +86,8 @@ impl PgStore {
                 flag VARCHAR(255) NOT NULL, \
                 cluster_ip VARCHAR(45) NOT NULL, \
                 created_at BIGINT NOT NULL, \
-                expires_at BIGINT NOT NULL, \
-            );",
+                expires_at BIGINT NOT NULL \
+             );",
         )
         .execute(&self.pool)
         .await?;
@@ -406,7 +215,7 @@ fn map_submission(row: &sqlx::postgres::PgRow) -> Result<Submission, sqlx::Error
     let is_correct: bool = row.get("is_correct");
     let submitted_at: i64 = row.get("submitted_at");
     Ok(Submission {
-        id: SubmissionId(id),
+        id: crate::libs::types::solves::SubmissionId(id),
         challenge_id,
         team_id: team_id_str.map(TeamId),
         account_id: AccountId(account_id),
