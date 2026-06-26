@@ -612,6 +612,8 @@ where
             }.into_response();
         }
     }
+    let mut updated_account = account;
+    updated_account.team_id = Some(team.id.clone());
     StatusCode::OK.into_response()
 }
 
