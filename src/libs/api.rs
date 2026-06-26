@@ -602,7 +602,16 @@ where
         Ok(Some(a))=>a,
         _ => return StatusCode::UNAUTHORIZED.into_response()
     };
-
+    if team.bracket == "Collegiate" {
+        let is_allowed = account.email.as_ref()
+            .map(|e| e.0.ends_with(".edu"))
+            .unwrap_or(false);
+        if !is_allowed {
+            return LocalizedError {
+                status: StatusCode::FORBIDDEN, message: LOCALES.lookup(&lang.0.parse().unwrap(), "ctf-bracket-domain-restricted"),
+            }.into_response();
+        }
+    }
     StatusCode::OK.into_response()
 }
 
