@@ -342,6 +342,7 @@ dependencies = [
  "base64",
  "chrono",
  "constant_time_eq",
+ "dotenvy",
  "fluent-templates",
  "hmac 0.13.0",
  "k8s-openapi",
