@@ -10,7 +10,7 @@ use tokio_rustls::{
     TlsConnector,
     client::TlsStream,
     rustls::{self, RootCertStore, pki_types::ServerName},
-}
+};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum TlsMode {
@@ -169,7 +169,7 @@ impl SmtpStream {
         }
         Ok(lines)
     }
-    async fn upgrade(self, hsot: &str) -> Result<SmtpStream, EmailError> {
+    async fn upgrade(self, host: &str) -> Result<SmtpStream, EmailError> {
         let tcp = match self {
             SmtpStream::Plain(buf) => buf.into_inner(),
             SmtpStream::Tls(_) => {
