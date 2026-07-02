@@ -1,10 +1,10 @@
-use std::sync::{Arc, LazyLock};
-use tokio::sync::Mutex;
 use cctf_rs::libs::{
     repos::{AccountRepo, pg::PgStore},
     services::{AuthService, ConfigService},
-    types::accounts::{Account, AccountEmail, AccountId, AccountName, AccountRole}
+    types::accounts::{Account, AccountEmail, AccountId, AccountName, AccountRole},
 };
+use std::sync::{Arc, LazyLock};
+use tokio::sync::Mutex;
 
 static DB_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 
@@ -61,7 +61,9 @@ async fn pg_config_upsert() {
         eprintln!("skipping pg_config_upsert - set TEST_DATABASE_URL to run");
         return;
     };
-    let svc = ConfigService { config_repo: store.clone() };
+    let svc = ConfigService {
+        config_repo: store.clone(),
+    };
     let cfg = svc.get().await.unwrap();
     assert!(cfg.registration_open);
     assert_eq!(cfg.freeze_time, None);
