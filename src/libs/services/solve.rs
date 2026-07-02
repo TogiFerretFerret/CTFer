@@ -8,6 +8,20 @@ use crate::libs::types::teams::TeamId;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
+/// Dynamic-decay scoring: value starts at `initial` and decays toward `minimum`
+/// as more teams solve it (`decay` controls how fast). First solve
+/// (`solve_count <= 1`) always earns the full `initial`.
+///
+/// ```
+/// use cctf_rs::libs::services::solve::calculate_dynamic_points;
+///
+/// // First blood earns the full value.
+/// assert_eq!(calculate_dynamic_points(500, 100, 10, 1), 500);
+///
+/// // More solves → fewer points, but never below the minimum.
+/// let many = calculate_dynamic_points(500, 100, 10, 50);
+/// assert!(many >= 100 && many < 500);
+/// ```
 pub fn calculate_dynamic_points(initial: u32, minimum: u32, decay: u32, solve_count: u32) -> u32 {
     if solve_count <= 1 {
         return initial;

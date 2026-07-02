@@ -28,6 +28,9 @@ pub struct PartialFlag {
     pub weight: f64,
 }
 
+/// How a challenge's flag is verified. `Static`/`Instanced` use constant-time
+/// comparison; `Regex`/`Script` evaluate a pattern or sandboxed rhai; `Multi`
+/// holds weighted [`PartialFlag`]s for partial scoring.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum FlagValidator {
     Static(String),
@@ -38,6 +41,27 @@ pub enum FlagValidator {
 }
 
 impl FlagValidator {
+    /// Check a submitted flag. `active_instanced_flag` is the team's live
+    /// per-instance flag, used only by [`FlagValidator::Instanced`]. Surrounding
+    /// whitespace is trimmed and comparisons are constant-time.
+    ///
+    /// ```
+    /// use cctf_rs::libs::types::flags::FlagValidator;
+    ///
+    /// let flag = FlagValidator::Static("cctf{h3llo}".to_string());
+    /// assert!(flag.is_match("cctf{h3llo}", None));
+    /// assert!(flag.is_match("  cctf{h3llo}  ", None)); // trimmed
+    /// assert!(!flag.is_match("cctf{nope}", None));
+    ///
+    /// let re = FlagValidator::Regex(r"^cctf\{[0-9a-f]{4}\}$".to_string());
+    /// assert!(re.is_match("cctf{beef}", None));
+    /// assert!(!re.is_match("cctf{zzzz}", None));
+    ///
+    /// // Instanced flags are checked against the team's live flag:
+    /// let inst = FlagValidator::Instanced;
+    /// assert!(inst.is_match("cctf{team}", Some("cctf{team}")));
+    /// assert!(!inst.is_match("cctf{team}", None));
+    /// ```
     pub fn is_match(&self, submitted_flag: &str, active_instanced_flag: Option<&str>) -> bool {
         match self {
             FlagValidator::Static(flag) => ct_eq(flag.trim(), submitted_flag.trim()),
@@ -73,6 +97,21 @@ impl FlagValidator {
         }
     }
 
+    /// For a [`FlagValidator::Multi`], return the first partial flag the
+    /// submission satisfies (drives weighted partial scoring). Returns `None`
+    /// for non-multi validators or when nothing matches.
+    ///
+    /// ```
+    /// use cctf_rs::libs::types::flags::{FlagValidator, PartialFlag};
+    ///
+    /// let multi = FlagValidator::Multi(vec![
+    ///     PartialFlag { id: "a".into(), validator: FlagValidator::Static("cctf{a}".into()), weight: 0.5 },
+    ///     PartialFlag { id: "b".into(), validator: FlagValidator::Static("cctf{b}".into()), weight: 0.5 },
+    /// ]);
+    ///
+    /// assert_eq!(multi.find_matching_partial("cctf{b}", None).unwrap().id, "b");
+    /// assert!(multi.find_matching_partial("cctf{z}", None).is_none());
+    /// ```
     pub fn find_matching_partial(
         &self,
         submitted_flag: &str,

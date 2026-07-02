@@ -31,6 +31,18 @@ pub struct Email {
     pub timestamp: i64,
 }
 
+/// Everything that can go wrong sending or receiving mail. Every variant is
+/// localizable via [`EmailError::localize`] (Fluent-backed, falls back to en-US).
+///
+/// ```
+/// use cctf_rs::libs::services::email::EmailError;
+///
+/// let msg = EmailError::AuthFailed.localize("en-US");
+/// assert!(!msg.is_empty());
+///
+/// // An unknown locale falls back to the en-US message.
+/// assert_eq!(EmailError::AuthFailed.localize("zz-ZZ"), msg);
+/// ```
 #[derive(Debug)]
 pub enum EmailError {
     Connect(String),

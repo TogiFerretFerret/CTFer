@@ -26,6 +26,29 @@ pub struct SmtpCredentials {
     pub password: String,
 }
 
+/// SMTP sender. Build with [`SmtpSenderClient::new`], optionally chain
+/// [`with_starttls`](SmtpSenderClient::with_starttls) /
+/// [`with_credentials`](SmtpSenderClient::with_credentials), then send via the
+/// [`EmailService`](super::EmailService) trait.
+///
+/// ```no_run
+/// use cctf_rs::libs::services::email::{EmailService, SmtpSenderClient};
+///
+/// # async fn demo() -> Result<(), Box<dyn std::error::Error>> {
+/// let client = SmtpSenderClient::new(
+///     "smtp.example.com".to_string(),
+///     587,
+///     "noreply@cctf.rs".to_string(),
+/// )
+/// .with_starttls()
+/// .with_credentials("smtp-user", "smtp-pass");
+///
+/// client
+///     .send_email("player@team.com", "Verify your account", "Click: https://cctf.rs/verify")
+///     .await?;
+/// # Ok(())
+/// # }
+/// ```
 pub struct SmtpSenderClient {
     pub smtp_host: String,
     pub smtp_port: u16,

@@ -86,6 +86,19 @@ pub struct Claims {
 }
 
 /// Mint a signed auth token for `sub`, valid for `ttl_seconds` from now.
+///
+/// ```
+/// use cctf_rs::libs::crypto::jwt::{issue, decode, Claims};
+///
+/// let secret = b"super-secret-key";
+/// let token = issue("account-123", 3600, secret).unwrap();
+///
+/// let (_header, claims) = decode::<Claims>(&token, secret).unwrap();
+/// assert_eq!(claims.sub, "account-123");
+///
+/// // A token verified with the wrong secret is rejected.
+/// assert!(decode::<Claims>(&token, b"not-the-secret").is_err());
+/// ```
 pub fn issue(sub: &str, ttl_seconds: i64, secret: &[u8]) -> Result<String, JwtError> {
     let now = chrono::Utc::now().timestamp();
     let claims = Claims {
