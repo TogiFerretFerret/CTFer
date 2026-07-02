@@ -75,11 +75,13 @@ impl fmt::Display for ServiceError {
 impl std::error::Error for ServiceError {}
 
 pub mod auth;
+pub mod config;
 pub mod email;
 pub mod instancer;
 pub mod scoreboard;
 pub mod solve;
 
 pub use auth::{AuthService, OAuthService};
+pub use config::ConfigService;
 pub use scoreboard::ScoreboardService;
 pub use solve::SolveService;
