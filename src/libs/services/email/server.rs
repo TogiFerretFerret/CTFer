@@ -133,7 +133,7 @@ pub(super) fn parse_email(envelope_from: String, rcpts: &[String], raw: &str) ->
     Email {
         id: uuid::Uuid::new_v4().to_string(),
         from: header_value(header_block, "From").unwrap_or(envelope_from),
-        to: header_value(header_block, "To").unwrap_or_Else(|| rcpts.join(", ")),
+        to: header_value(header_block, "To").unwrap_or_else(|| rcpts.join(", ")),
         subject: header_value(header_block, "Subject").unwrap_or_default(),
         body,
         timestamp: chrono::Utc::now().timestamp(),

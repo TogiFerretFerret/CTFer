@@ -120,7 +120,7 @@ async fn inbound_handler(
             return StatusCode::BAD_REQUEST;
         };
         let envelope_from = header_str(&headers, "x-mail-from");
-        let rcpts: Vec<String> header_str(&headers, "x-mail-to")
+        let rcpts: Vec<String> = header_str(&headers, "x-mail-to")
             .split(',')
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty())
