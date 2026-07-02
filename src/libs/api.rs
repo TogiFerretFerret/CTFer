@@ -986,6 +986,9 @@ mod tests {
     }
     #[tokio::test]
     async fn test_api_register_and_login() {
+        // reqwest (rustls-no-provider) needs a process-wide provider; main() installs
+        // it at boot, but tests don't run main. `let _ =` ignores "already installed".
+        let _ = tokio_rustls::rustls::crypto::ring::default_provider().install_default();
         let store = Arc::new(TestStore::default());
         let state = AppState {
             auth_service: Arc::new(AuthService {
@@ -1071,6 +1074,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_collegiate_bracket_acl() {
+        let _ = tokio_rustls::rustls::crypto::ring::default_provider().install_default();
         let store = Arc::new(TestStore::default());
 
         // 1. Create a Collegiate bracket team
