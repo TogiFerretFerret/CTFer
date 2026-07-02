@@ -4,9 +4,10 @@
 FROM rust:1-bookworm AS builder
 WORKDIR /app
 
-# reqwest defaults to native-tls (OpenSSL), so the build needs it.
+# reqwest's rustls uses aws-lc-rs; building aws-lc-sys needs cmake + a C
+# compiler (gcc/make already ship in the rust image). No OpenSSL anywhere.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        pkg-config libssl-dev \
+        cmake \
     && rm -rf /var/lib/apt/lists/*
 
 # 1) Cache the dependency graph: compile a stub crate with only the manifests.
@@ -27,9 +28,10 @@ RUN cargo build --release --locked
 FROM debian:bookworm-slim AS runtime
 WORKDIR /app
 
-# ca-certificates: outbound HTTPS (CTFtime OAuth). libssl3: native-tls runtime.
+# reqwest verifies outbound HTTPS (CTFtime OAuth) against the system trust store
+# via rustls-platform-verifier, so ca-certificates is required. No OpenSSL.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        ca-certificates libssl3 \
+        ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/target/release/cctf-rs /usr/local/bin/cctf-rs
