@@ -8,6 +8,8 @@ use unic_langid::{LanguageIdentifier, langid};
 
 pub mod client;
 pub mod server;
+pub mod http;
+pub use http::{HttpCatcher, HttpCatcherConfig};
 pub use client::{SmtpCredentials, SmtpSenderClient, TlsMode};
 pub use server::{Mailbox, SmtpCatcherServer};
 
@@ -42,6 +44,7 @@ pub enum EmailError {
     AuthFailed,
     AuthRequiresTls,
     MessageTooLarge,
+    AlreadySecured,
 }
 
 fn lookup_reason(lang_id: &LanguageIdentifier, key: &str, reason: &str) -> String {
@@ -75,6 +78,7 @@ impl EmailError {
                 ]);
                 LOCALES.lookup_with_args(&lang_id, "email-command-rejected", &args)
             }
+            EmailError::AlreadySecured => LOCALES.lookup(&lang_id, "email-already-secured"),
         }
     }
 }

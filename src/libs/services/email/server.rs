@@ -124,20 +124,22 @@ fn header_value(block: &str, name: &str) -> Option<String> {
     None
 }
 
-fn parse_email(envelope_from: String, rcpts: &[String], raw: &str) -> Email {
-    let (header_block, body) = match raw.split_once("\n\n") {
-        Some((h,b)) => (h,b.to_string()),
-        None=>("",raw.to_string()),
-    };
+pub(super) fn parse_email(envelope_from: String, rcpts: &[String], raw: &str) -> Email {
+    let (header_block, body) = raw
+        .split_once("\r\n\r\n")
+        .or_else(|| raw.split_once("\n\n"))
+        .map(|(h, b)| (h, b.to_string()))
+        .unwrap_or(("", raw.to_string()));
     Email {
         id: uuid::Uuid::new_v4().to_string(),
         from: header_value(header_block, "From").unwrap_or(envelope_from),
-        to: header_value(header_block, "To").unwrap_or_else(|| rcpts.join(", ")),
+        to: header_value(header_block, "To").unwrap_or_Else(|| rcpts.join(", ")),
         subject: header_value(header_block, "Subject").unwrap_or_default(),
         body,
         timestamp: chrono::Utc::now().timestamp(),
     }
 }
+
 async fn handle_connection(
     socket: TcpStream,
     hostname: String,

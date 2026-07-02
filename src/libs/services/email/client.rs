@@ -173,7 +173,7 @@ impl SmtpStream {
         let tcp = match self {
             SmtpStream::Plain(buf) => buf.into_inner(),
             SmtpStream::Tls(_) => {
-                return Err(EmailError::Tls("connection already secured".to_string())); // TODO: localize 
+                return Err(EmailError::AlreadySecured);
             }
         };
         let connector = build_tls_connector()?;
