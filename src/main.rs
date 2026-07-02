@@ -47,7 +47,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         team_repo: store.clone(),
         challenge_repo: store.clone(),
         submission_repo: store.clone(),
-        sort_by_accuracy: false, // TODO: Make this configurable
+        sort_by_accuracy: cfg.sort_by_accuracy,
         freeze_time: cfg.freeze_time,
     });
     let state = AppState {

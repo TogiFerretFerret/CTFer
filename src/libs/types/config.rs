@@ -34,6 +34,8 @@ pub struct CtfConfig {
     pub freeze_time: Option<i64>,
     pub registration_open: bool,
     pub require_email_verification: bool,
+    #[serde(default)]
+    pub sort_by_accuracy: bool,
 }
 
 impl Default for CtfConfig {
@@ -45,6 +47,7 @@ impl Default for CtfConfig {
             freeze_time: None,
             registration_open: true,
             require_email_verification: false,
+            sort_by_accuracy: false,
         }
     }
 }
