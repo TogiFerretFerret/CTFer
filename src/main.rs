@@ -1,5 +1,11 @@
-// Thin binary: the platform lives in the `cctf_rs` library crate (src/lib.rs).
-// Bootstrap (axum server, PgStore, AppState) will be wired here next.
-fn main() {
-    println!("Hello, world!");
+use std::net::SocketAddr;
+use std::sync::Arc;
+
+use cctf_rs::libs::{
+    api::{self, AppState, RateLimiter},
+    repos::pg::PgStore,
+    services::{
+        email::{HttpCatcher, HttpCatcherConfig},
+        AuthService, ConfigService, OAuthService, ScoreboardService, SolveService,
+    }
 }
