@@ -2,10 +2,7 @@ openapi: 3.0.3
 info:
   title: cctf.rs API
   description: >
-    Hand-written OpenAPI contract for the cctf.rs CTF platform (headless axum API;
-    the frontend is a separate Astro app). This spec is the source of truth — a
-    drift-guard test asserts these paths match the routes registered in
-    `create_router`. Schemas mirror serde's encoding: newtype wrappers serialize
+    OpenAPI contract for cctf.rs . This spec is the SOT — Schemas mirror serde's encoding: newtype wrappers serialize
     as their inner value, and Rust enums are externally tagged
     (unit variants as bare strings, data variants as `{ "Variant": <payload> }`).
   version: 0.1.0
